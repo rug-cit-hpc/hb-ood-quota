@@ -1,9 +1,11 @@
+import os
 import sys
 import json
 import subprocess
 
 from pwd import getpwnam
 from datetime import datetime
+
 
 
 def get_home_fs(user: str) -> str:
@@ -60,15 +62,45 @@ class LustreQuota:
         }
 
 
+class NFSQuota:
+    def __init__(self, account: str, filesystem: str):
+        self.account = account
+        self.filesystem = filesystem
+        self.total_block_usage = None
+        self.block_limit = None
+        self.total_file_usage = None
+        self.file_limit = None
+
+    def get(self):
+        quota = os.statvfs(self.filesystem)
+        self.total_block_usage = (quota.f_blocks - quota.f_bavail) * quota.f_frsize // 1024
+        self.block_limit = quota.f_blocks * quota.f_frsize // 1024
+        self.total_file_usage = quota.f_files - quota.f_favail
+        self.file_limit = quota.f_files
+        return self
+
+    def to_ood_json(self):
+        return {
+            "user": self.account,
+            "path": self.filesystem,
+            "total_block_usage": self.total_block_usage,
+            "block_limit": self.block_limit,
+            "total_file_usage": self.total_file_usage,
+            "file_limit": self.file_limit
+        }
+
 class Quotas:
     def __init__(self, user: str):
         self.user = user
         self.quotas = []
 
-    def add_quota(self, quota: LustreQuota):
+    def add_lustre_quota(self, quota: LustreQuota):
         self.quotas.append(quota)
 
-    def to_dict(self):
+    def add_nfs_quota(self, quota: NFSQuota):
+        self.quotas.append(quota)
+
+    def to_ood_json(self):
         return {
             "version": 1,
             "timestamp": int(datetime.timestamp(datetime.now())),
@@ -78,14 +110,15 @@ class Quotas:
 
 def main():
     user = sys.argv[1] if len(sys.argv) > 1 else None
+    user_home = get_home_fs(user)
     quotas = Quotas(user)
-    quotas.add_quota(LustreQuota(user, '/projects').get())
-    quotas.add_quota(LustreQuota(user, '/scratch').get())
-    content = quotas.to_dict()
+    quotas.add_nfs_quota(NFSQuota(user, user_home).get())
+    quotas.add_lustre_quota(LustreQuota(user, '/projects').get())
+    quotas.add_lustre_quota(LustreQuota(user, '/scratch').get())
+    content = quotas.to_ood_json()
     user_home = get_home_fs(user)
     with open(f'{user_home}/ondemand/.quota.json', 'w') as outfile:
         json.dump(content, outfile, indent=4)
-    print(f"Hello, {user}!")
 
 
 if __name__ == "__main__":
