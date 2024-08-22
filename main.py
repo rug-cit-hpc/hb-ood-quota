@@ -119,6 +119,7 @@ def main():
     user_home = get_home_fs(user)
     with open(f'{user_home}/ondemand/.quota.json', 'w') as outfile:
         json.dump(content, outfile, indent=4)
+    print(json.dumps(content, indent=4))
 
 
 if __name__ == "__main__":
