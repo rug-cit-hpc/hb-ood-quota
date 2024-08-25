@@ -14,17 +14,20 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python main.py <username>")
         sys.exit(1)
+    
     try:
         check_user_exists(sys.argv[1])
         user = sys.argv[1]
     except KeyError as e:
         print(e.args[0])
         sys.exit(1)
+    
     try:
         user_home = get_home_fs(user)
     except KeyError as e:
         print(e.args[0])
         sys.exit(1)
+    
     quotas = Quotas(user)
     quotas.add_nfs_quota(NFSQuota(user, user_home).get())
     quotas.add_lustre_quota(LustreQuota(user, '/projects').get())
