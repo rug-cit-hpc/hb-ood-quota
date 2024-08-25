@@ -30,4 +30,3 @@ class Quotas:
                 json.dump(self.to_ood_json(), outfile, indent=4)
         except PermissionError as e:
             raise PermissionError(f"Error saving quotas to file {file_path}, no write permissions")
-    
