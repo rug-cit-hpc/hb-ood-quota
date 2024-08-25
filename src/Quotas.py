@@ -25,5 +25,8 @@ class Quotas:
         }
 
     def to_file(self, file_path: str):
-        with open(file_path, 'w') as outfile:
-            json.dump(self.to_ood_json(), outfile, indent=4)
+        try:
+            with open(file_path, 'w') as outfile:
+                json.dump(self.to_ood_json(), outfile, indent=4)
+        except PermissionError as e:
+            raise PermissionError(f"Error saving quotas to file {file_path}, no write permissions")
